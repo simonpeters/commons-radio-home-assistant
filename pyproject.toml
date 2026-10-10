@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "commons-radio-home-assistant"
+version = "0.1.0"
+description = "Home Assistant integration for Commons Radio"
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "aioresponses>=0.7.8",
+  "pytest>=8.3",
+  "pytest-homeassistant-custom-component>=0.13.200",
+  "pytest-asyncio>=0.25",
+  "ruff>=0.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["custom_components/commons_radio"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "ANN401",
+  "ARG001",
+  "ARG002",
+  "COM812",
+  "CPY001",
+  "D203",
+  "D213",
+  "EM101",
+  "PLR0911",
+  "TC001",
+  "TC002",
+  "TC003",
+  "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "D", "PLR2004", "S101", "SLF001"]

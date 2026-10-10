@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "commonsradio"
+version = "0.1.0"
+description = "Async Python client for the Commons Radio public API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Simon Peters" }]
+dependencies = ["aiohttp>=3.9"]
+
+[project.urls]
+Homepage = "https://github.com/simonpeters/commons-radio-home-assistant"
+Issues = "https://github.com/simonpeters/commons-radio-home-assistant/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/commonsradio"]

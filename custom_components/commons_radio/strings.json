@@ -1,0 +1,31 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Commons Radio is already configured.",
+      "reauth_entry_missing": "The Commons Radio entry no longer exists.",
+      "reauth_successful": "The API key was updated."
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Commons Radio.",
+      "invalid_auth": "The API key is invalid.",
+      "missing_scope": "The API key does not have the library:read scope.",
+      "unknown": "An unexpected error occurred."
+    },
+    "step": {
+      "user": {
+        "title": "Connect to Commons Radio",
+        "description": "Enter an API key with the catalog:read and library:read scopes.",
+        "data": {
+          "api_key": "API key"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update the Commons Radio API key",
+        "description": "Enter a new API key with the catalog:read and library:read scopes.",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    }
+  }
+}
