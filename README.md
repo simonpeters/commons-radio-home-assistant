@@ -1,31 +1,37 @@
 # Commons Radio for Home Assistant
 
 This custom integration lets Home Assistant users browse and play Commons
-Radio stations. It also creates an on-air sensor for each favorite station.
+Radio stations on their speakers, and use them in automations. It can also
+show what is on air on your favorite stations.
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=simonpeters&repository=commons-radio-home-assistant&category=integration)
 
 This repository uses the MIT license.
 
 ## Status
 
-This is phase 1. It supports station browsing, playback, favorites,
-collections, and schedule sensors. It does not control a Commons Radio
-hardware radio.
+It supports station browsing, playback of stations, collections and
+favorites, the `commons_radio.play` action, blueprints, and on-air sensors.
+It does not control a Commons Radio hardware radio yet.
 
 You need a Commons Radio API key with the `catalog:read` and `library:read`
-scopes.
+scopes. Make one on https://www.commonsradio.eu in your profile, under
+"API keys".
 
 ## Install with HACS
 
-1. Open HACS in Home Assistant.
-2. Open the custom repositories menu.
-3. Add `https://github.com/simonpeters/commons-radio-home-assistant`.
-4. Select **Integration** as the category.
-5. Install **Commons Radio**.
-6. Restart Home Assistant.
-7. Open **Settings > Devices & services**.
-8. Select **Add integration**.
-9. Search for **Commons Radio**.
-10. Enter your Commons Radio API key.
+You need [HACS](https://hacs.xyz) in your Home Assistant.
+
+1. Select the **Open in HACS** button at the top of this page. Or open HACS,
+   open the custom repositories menu, add
+   `https://github.com/simonpeters/commons-radio-home-assistant`, and select
+   **Integration** as the category.
+2. Download **Commons Radio**.
+3. Restart Home Assistant.
+4. Open **Settings > Devices & services**.
+5. Select **Add integration**.
+6. Search for **Commons Radio**.
+7. Enter your Commons Radio API key.
 
 The integration checks the key with the Favorites endpoint. It reports an
 invalid key, a missing scope, or a connection error.
