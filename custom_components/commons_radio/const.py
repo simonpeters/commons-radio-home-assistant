@@ -1,0 +1,13 @@
+"""Constants for the Commons Radio integration."""
+
+from typing import Final
+
+from .commonsradio import DEFAULT_USER_AGENT
+
+DOMAIN: Final = "commons_radio"
+CONF_API_KEY: Final = "api_key"
+TITLE: Final = "Commons Radio"
+UPDATE_INTERVAL_SECONDS: Final = 60
+SCHEDULE_PARALLEL_LIMIT: Final = 5
+STATION_CACHE_SECONDS: Final = 60 * 60
+USER_AGENT: Final = f"{DEFAULT_USER_AGENT} HomeAssistant"
