@@ -49,8 +49,8 @@ attributes.
 
 ## Icon
 
-The project does not have a logo yet. Add the approved icon later at
-`brand/icon.png`. Do not use a temporary logo in a release.
+The integration uses the Commons Radio app icon from
+`custom_components/commons_radio/brand/`.
 
 ## Development
 
