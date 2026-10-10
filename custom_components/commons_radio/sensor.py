@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -43,7 +43,6 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
     """Show the current and next show for one favorite station."""
 
     _attr_has_entity_name = True
-    _attr_name = "On air"
     _attr_icon = "mdi:radio"
 
     def __init__(
@@ -56,21 +55,38 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
         super().__init__(coordinator)
         self._station_id = station_id
         self._attr_unique_id = f"{entry_id}_{station_id}_on_air"
+        self._attr_name = f"{coordinator.data[station_id].station.name} on air"
+        # A station is not a device in the home. All sensors belong to one
+        # service device, so Home Assistant does not ask for an area.
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="Commons Radio",
+            manufacturer="Commons Radio",
+            entry_type=DeviceEntryType.SERVICE,
+            configuration_url="https://www.commonsradio.eu",
+        )
 
     @property
-    def _station_data(self) -> FavoriteStationData:
-        return self.coordinator.data[self._station_id]
+    def available(self) -> bool:
+        """Return False when the station is no longer a favorite."""
+        return super().available and self._station_id in self.coordinator.data
+
+    @property
+    def _station_data(self) -> FavoriteStationData | None:
+        return self.coordinator.data.get(self._station_id)
 
     @property
     def native_value(self) -> str | None:
         """Return the current show title, or unknown when it is null."""
-        schedule = self._station_data.schedule
+        data = self._station_data
+        schedule = data.schedule if data else None
         return schedule.now.title if schedule and schedule.now else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return details about the next show."""
-        schedule = self._station_data.schedule
+        data = self._station_data
+        schedule = data.schedule if data else None
         next_show = schedule.next if schedule else None
         if next_show is None:
             return {"next_show": None}
@@ -79,16 +95,3 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
             "next_show_start": next_show.start,
             "next_show_end": next_show.end,
         }
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Group the sensor under its station."""
-        station = self._station_data.station
-        info = DeviceInfo(
-            identifiers={(DOMAIN, station.id)},
-            name=station.name,
-            manufacturer="Commons Radio",
-        )
-        if station.homepage:
-            info["configuration_url"] = station.homepage
-        return info
