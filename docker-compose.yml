@@ -1,0 +1,17 @@
+# A local Home Assistant for manual tests of this integration.
+# Start it with `docker compose up -d` and open http://localhost:8123.
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: commons-radio-ha
+    ports:
+      - "8123:8123"
+    environment:
+      TZ: Europe/Brussels
+    volumes:
+      # Home Assistant writes its state here. Git ignores this directory.
+      - ./.ha-config:/config
+      - ./dev/configuration.yaml:/config/configuration.yaml:ro
+      # The integration from this repository. Restart the container after a change.
+      - ./custom_components/commons_radio:/config/custom_components/commons_radio:ro
+    restart: unless-stopped

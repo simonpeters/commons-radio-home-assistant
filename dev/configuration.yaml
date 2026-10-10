@@ -1,0 +1,7 @@
+# Configuration for the local Home Assistant in docker-compose.yml.
+default_config:
+
+logger:
+  default: warning
+  logs:
+    custom_components.commons_radio: debug
