@@ -1,0 +1,127 @@
+blueprint:
+  name: Radio when someone comes home
+  description: Play Commons Radio when the first person comes home.
+  domain: automation
+  author: Commons Radio
+  homeassistant:
+    min_version: 2026.2.0
+  source_url: https://github.com/simonpeters/commons-radio-home-assistant/blob/main/blueprints/automation/commons_radio/come_home.yaml
+  input:
+    playback:
+      name: Playback
+      description: Select the speakers and the radio source.
+      input:
+        media_players:
+          name: Speakers
+          description: Select one or more media players.
+          selector:
+            entity:
+              filter:
+                domain: media_player
+              multiple: true
+        source_type:
+          name: Source type
+          description: Select what Commons Radio plays.
+          default: favorites
+          selector:
+            select:
+              options:
+                - label: Random favorite
+                  value: favorites
+                - label: Collection
+                  value: collection
+                - label: Station
+                  value: station
+        source_name:
+          name: Source name
+          description: Enter the collection or station name. Leave this empty for favorites.
+          default: ""
+          selector:
+            text:
+        volume:
+          name: Volume
+          description: Set the playback volume.
+          default: 25
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+    time_window:
+      name: Time window
+      description: Limit playback to a time window.
+      input:
+        use_time_window:
+          name: Use time window
+          description: Turn this off to allow playback at any time.
+          default: true
+          selector:
+            boolean:
+        after:
+          name: Start time
+          description: Allow playback after this time.
+          default: "06:00:00"
+          selector:
+            time:
+        before:
+          name: End time
+          description: Allow playback before this time.
+          default: "23:00:00"
+          selector:
+            time:
+
+triggers:
+  - trigger: state
+    entity_id: zone.home
+    from: "0"
+
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.state | int(0) > 0 }}"
+  - condition: or
+    conditions:
+      - condition: template
+        value_template: "{{ not use_time_window }}"
+      - condition: time
+        after: !input after
+        before: !input before
+
+variables:
+  source_type: !input source_type
+  source_name: !input source_name
+  use_time_window: !input use_time_window
+  volume: !input volume
+
+actions:
+  - action: media_player.volume_set
+    continue_on_error: true
+    target:
+      entity_id: !input media_players
+    data:
+      volume_level: "{{ (volume | float(0)) / 100 }}"
+  - choose:
+      - conditions: "{{ source_type == 'favorites' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              favorites: true
+      - conditions: "{{ source_type == 'collection' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              collection: "{{ source_name }}"
+      - conditions: "{{ source_type == 'station' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              station: "{{ source_name }}"
+
+mode: single

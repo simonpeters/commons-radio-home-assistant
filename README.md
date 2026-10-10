@@ -96,6 +96,76 @@ data:
 To use voice control, create a script with the `commons_radio.play` action.
 Expose the script to Assist. You can then ask Assist to run the script.
 
+## Blueprints
+
+Import a blueprint, select your speakers and source, and save it.
+
+### Wake up with Commons Radio
+
+[![Import the wake-up blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fsimonpeters%2Fcommons-radio-home-assistant%2Fmain%2Fblueprints%2Fautomation%2Fcommons_radio%2Fwake_up.yaml)
+
+### Radio when someone comes home
+
+[![Import the come-home blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fsimonpeters%2Fcommons-radio-home-assistant%2Fmain%2Fblueprints%2Fautomation%2Fcommons_radio%2Fcome_home.yaml)
+
+### Stop the radio when everyone leaves
+
+[![Import the everyone-leaves blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fsimonpeters%2Fcommons-radio-home-assistant%2Fmain%2Fblueprints%2Fautomation%2Fcommons_radio%2Feveryone_leaves.yaml)
+
+### Fall asleep to Commons Radio
+
+[![Import the fall-asleep blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Fsimonpeters%2Fcommons-radio-home-assistant%2Fmain%2Fblueprints%2Fscript%2Fcommons_radio%2Ffall_asleep.yaml)
+
+## Dashboard
+
+This dashboard card has buttons for two collections, a random favorite, and
+stop. Replace the speaker and collection names with your values.
+
+```yaml
+type: grid
+columns: 2
+square: false
+cards:
+  - type: button
+    name: Morning
+    icon: mdi:weather-sunset-up
+    tap_action:
+      action: perform-action
+      perform_action: commons_radio.play
+      target:
+        entity_id: media_player.kitchen
+      data:
+        collection: Morning
+  - type: button
+    name: Evening
+    icon: mdi:weather-sunset-down
+    tap_action:
+      action: perform-action
+      perform_action: commons_radio.play
+      target:
+        entity_id: media_player.kitchen
+      data:
+        collection: Evening
+  - type: button
+    name: Random favorite
+    icon: mdi:shuffle-variant
+    tap_action:
+      action: perform-action
+      perform_action: commons_radio.play
+      target:
+        entity_id: media_player.kitchen
+      data:
+        favorites: true
+  - type: button
+    name: Stop
+    icon: mdi:stop
+    tap_action:
+      action: perform-action
+      perform_action: media_player.media_stop
+      target:
+        entity_id: media_player.kitchen
+```
+
 ## Icon
 
 The integration uses the Commons Radio app icon from

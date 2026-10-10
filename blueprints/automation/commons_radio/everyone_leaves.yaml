@@ -1,0 +1,41 @@
+blueprint:
+  name: Stop the radio when everyone leaves
+  description: Stop the selected speakers when the last person leaves home.
+  domain: automation
+  author: Commons Radio
+  homeassistant:
+    min_version: 2026.2.0
+  source_url: https://github.com/simonpeters/commons-radio-home-assistant/blob/main/blueprints/automation/commons_radio/everyone_leaves.yaml
+  input:
+    settings:
+      name: Settings
+      description: Select the speakers and the delay.
+      input:
+        media_players:
+          name: Speakers
+          description: Select one or more media players.
+          selector:
+            entity:
+              filter:
+                domain: media_player
+              multiple: true
+        leave_delay:
+          name: Delay
+          description: Wait for this time before the speakers stop.
+          default:
+            minutes: 2
+          selector:
+            duration:
+
+triggers:
+  - trigger: state
+    entity_id: zone.home
+    to: "0"
+    for: !input leave_delay
+
+actions:
+  - action: media_player.media_stop
+    target:
+      entity_id: !input media_players
+
+mode: single

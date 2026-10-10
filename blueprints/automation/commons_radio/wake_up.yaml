@@ -1,0 +1,176 @@
+blueprint:
+  name: Wake up with Commons Radio
+  description: Play Commons Radio on selected days and fade the volume up.
+  domain: automation
+  author: Commons Radio
+  homeassistant:
+    min_version: 2026.2.0
+  source_url: https://github.com/simonpeters/commons-radio-home-assistant/blob/main/blueprints/automation/commons_radio/wake_up.yaml
+  input:
+    playback:
+      name: Playback
+      description: Select the speakers and the radio source.
+      input:
+        media_players:
+          name: Speakers
+          description: Select one or more media players.
+          selector:
+            entity:
+              filter:
+                domain: media_player
+              multiple: true
+        source_type:
+          name: Source type
+          description: Select what Commons Radio plays.
+          default: favorites
+          selector:
+            select:
+              options:
+                - label: Random favorite
+                  value: favorites
+                - label: Collection
+                  value: collection
+                - label: Station
+                  value: station
+        source_name:
+          name: Source name
+          description: Enter the collection or station name. Leave this empty for favorites.
+          default: ""
+          selector:
+            text:
+    schedule:
+      name: Schedule
+      description: Select the wake time and days.
+      input:
+        wake_time:
+          name: Wake time
+          description: Select the time to start the radio.
+          selector:
+            time:
+        weekdays:
+          name: Days
+          description: Select the days to start the radio.
+          default:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: Monday
+                  value: mon
+                - label: Tuesday
+                  value: tue
+                - label: Wednesday
+                  value: wed
+                - label: Thursday
+                  value: thu
+                - label: Friday
+                  value: fri
+                - label: Saturday
+                  value: sat
+                - label: Sunday
+                  value: sun
+    volume:
+      name: Volume
+      description: Set the start level, end level, and fade time.
+      input:
+        start_volume:
+          name: Start volume
+          description: Set the volume when playback starts.
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        end_volume:
+          name: End volume
+          description: Set the volume when the fade ends.
+          default: 35
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        fade_minutes:
+          name: Fade time
+          description: Set the number of minutes for the fade.
+          default: 5
+          selector:
+            number:
+              min: 0
+              max: 30
+              step: 1
+              unit_of_measurement: min
+              mode: slider
+
+triggers:
+  - trigger: time
+    at: !input wake_time
+
+conditions:
+  - condition: time
+    weekday: !input weekdays
+
+variables:
+  source_type: !input source_type
+  source_name: !input source_name
+  start_volume: !input start_volume
+  end_volume: !input end_volume
+  fade_minutes: !input fade_minutes
+  fade_seconds: "{{ (fade_minutes | float(0) * 60) | int }}"
+  fade_steps: "{{ [1, ((fade_seconds | float(0) / 15) | round(0, 'ceil') | int)] | max }}"
+
+actions:
+  - action: media_player.volume_set
+    continue_on_error: true
+    target:
+      entity_id: !input media_players
+    data:
+      volume_level: "{{ (start_volume | float(0)) / 100 }}"
+  - choose:
+      - conditions: "{{ source_type == 'favorites' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              favorites: true
+      - conditions: "{{ source_type == 'collection' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              collection: "{{ source_name }}"
+      - conditions: "{{ source_type == 'station' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              station: "{{ source_name }}"
+  - repeat:
+      count: "{{ fade_steps }}"
+      sequence:
+        - delay:
+            seconds: "{{ (fade_seconds | float(0)) / (fade_steps | float(1)) }}"
+        - action: media_player.volume_set
+          continue_on_error: true
+          target:
+            entity_id: !input media_players
+          data:
+            volume_level: >-
+              {{ ((start_volume | float(0)) +
+                  (((end_volume | float(0)) - (start_volume | float(0))) *
+                  repeat.index / (fade_steps | float(1)))) / 100 }}
+
+mode: single

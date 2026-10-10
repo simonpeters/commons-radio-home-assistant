@@ -1,0 +1,128 @@
+blueprint:
+  name: Fall asleep to Commons Radio
+  description: Play Commons Radio, fade the volume down, and stop playback.
+  domain: script
+  author: Commons Radio
+  homeassistant:
+    min_version: 2026.2.0
+  source_url: https://github.com/simonpeters/commons-radio-home-assistant/blob/main/blueprints/script/commons_radio/fall_asleep.yaml
+  input:
+    playback:
+      name: Playback
+      description: Select the speakers and the radio source.
+      input:
+        media_players:
+          name: Speakers
+          description: Select one or more media players.
+          selector:
+            entity:
+              filter:
+                domain: media_player
+              multiple: true
+        source_type:
+          name: Source type
+          description: Select what Commons Radio plays.
+          default: favorites
+          selector:
+            select:
+              options:
+                - label: Random favorite
+                  value: favorites
+                - label: Collection
+                  value: collection
+                - label: Station
+                  value: station
+        source_name:
+          name: Source name
+          description: Enter the collection or station name. Leave this empty for favorites.
+          default: ""
+          selector:
+            text:
+    volume:
+      name: Volume
+      description: Set the start volume and fade time.
+      input:
+        start_volume:
+          name: Start volume
+          description: Set the volume when playback starts.
+          default: 25
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: slider
+        minutes:
+          name: Fade time
+          description: Set the number of minutes before playback stops.
+          default: 30
+          selector:
+            number:
+              min: 0
+              max: 120
+              step: 1
+              unit_of_measurement: min
+              mode: slider
+
+variables:
+  source_type: !input source_type
+  source_name: !input source_name
+  start_volume: !input start_volume
+  minutes: !input minutes
+  fade_seconds: "{{ (minutes | float(0) * 60) | int }}"
+  fade_steps: "{{ [1, ((fade_seconds | float(0) / 15) | round(0, 'ceil') | int)] | max }}"
+
+sequence:
+  - action: media_player.volume_set
+    continue_on_error: true
+    target:
+      entity_id: !input media_players
+    data:
+      volume_level: "{{ (start_volume | float(0)) / 100 }}"
+  - choose:
+      - conditions: "{{ source_type == 'favorites' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              favorites: true
+      - conditions: "{{ source_type == 'collection' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              collection: "{{ source_name }}"
+      - conditions: "{{ source_type == 'station' }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              station: "{{ source_name }}"
+  - repeat:
+      count: "{{ fade_steps }}"
+      sequence:
+        - delay:
+            seconds: "{{ (fade_seconds | float(0)) / (fade_steps | float(1)) }}"
+        - action: media_player.volume_set
+          continue_on_error: true
+          target:
+            entity_id: !input media_players
+          data:
+            volume_level: >-
+              {{ ((start_volume | float(0)) *
+                  (1 - repeat.index / (fade_steps | float(1)))) / 100 }}
+  - action: media_player.media_stop
+    target:
+      entity_id: !input media_players
+  - action: media_player.volume_set
+    continue_on_error: true
+    target:
+      entity_id: !input media_players
+    data:
+      volume_level: "{{ (start_volume | float(0)) / 100 }}"
+
+mode: restart
