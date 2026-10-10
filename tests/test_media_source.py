@@ -31,7 +31,7 @@ def _add_entry(hass) -> None:
     entry.add_to_hass(hass)
 
 
-def _item(hass, identifier: str) -> MediaSourceItem:
+def _item(hass, identifier: str | None) -> MediaSourceItem:
     return MediaSourceItem(hass, DOMAIN, identifier, None)
 
 
@@ -79,6 +79,30 @@ async def test_media_source_tree_and_resolve(hass, aioclient_mock) -> None:
     media = await source.async_resolve_media(_item(hass, "station/station-1"))
     assert media.url == "https://stream.example/station.mp3"
     assert media.mime_type == "audio/mpeg"
+
+
+async def test_browse_root_without_identifier(hass) -> None:
+    """Browse the root when the media picker sends no identifier.
+
+    The action's media picker opens media-source://commons_radio without a
+    trailing slash, and Home Assistant then passes None as the identifier.
+    """
+    _add_entry(hass)
+    source = await async_get_media_source(hass)
+
+    root = await source.async_browse_media(_item(hass, None))
+
+    assert [child.title for child in root.children] == [
+        "Favorites",
+        "My collections",
+        "Popular stations",
+    ]
+    assert MediaSourceItem.from_uri(
+        hass, f"media-source://{DOMAIN}", None
+    ).identifier in (
+        None,
+        "",
+    )
 
 
 async def test_resolve_collection_picks_station_at_play_time(

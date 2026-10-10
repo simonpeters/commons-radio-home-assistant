@@ -62,7 +62,7 @@ class CommonsRadioMediaSource(MediaSource):
         """Resolve a station or collection item to a stream URL."""
         try:
             station = await async_resolve_station(
-                self.client, item.identifier.strip("/")
+                self.client, (item.identifier or "").strip("/")
             )
             return station_to_play_media(station)
         except CommonsRadioError as error:
@@ -70,7 +70,7 @@ class CommonsRadioMediaSource(MediaSource):
 
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         """Return one level of the Commons Radio media tree."""
-        identifier = item.identifier.strip("/")
+        identifier = (item.identifier or "").strip("/")
         try:
             if not identifier:
                 return self._root()
