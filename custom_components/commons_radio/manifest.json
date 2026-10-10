@@ -1,10 +1,14 @@
 {
   "domain": "commons_radio",
   "name": "Commons Radio",
-  "codeowners": ["@simonpeters"],
+  "codeowners": [
+    "@simonpeters"
+  ],
   "config_flow": true,
+  "dependencies": [
+    "media_source"
+  ],
   "documentation": "https://github.com/simonpeters/commons-radio-home-assistant",
-  "dependencies": ["media_source"],
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/simonpeters/commons-radio-home-assistant/issues",

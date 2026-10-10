@@ -108,7 +108,7 @@ async def test_resolve_collection_picks_station_at_play_time(
         media = await source.async_resolve_media(_item(hass, "collection/morning"))
 
     assert media.url == "https://stream.example/two.aac"
-    assert media.mime_type == "audio/x-aac"
+    assert media.mime_type == "audio/aac"
 
 
 async def test_resolve_collection_tries_another_station(hass, aioclient_mock) -> None:

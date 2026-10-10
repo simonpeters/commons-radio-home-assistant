@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import mimetypes
 import random
 from urllib.parse import quote, unquote, urlsplit
 
@@ -211,10 +210,25 @@ def _station_item(station: Station) -> BrowseMediaSource:
     )
 
 
+# A fixed table, because the mimetypes module gives different types on
+# different systems (for example audio/x-aac on macOS, audio/aac on Linux).
+_STREAM_MIME_TYPES = {
+    ".aac": "audio/aac",
+    ".flac": "audio/flac",
+    ".m3u8": "application/vnd.apple.mpegurl",
+    ".m4a": "audio/mp4",
+    ".mp3": "audio/mpeg",
+    ".oga": "audio/ogg",
+    ".ogg": "audio/ogg",
+    ".opus": "audio/ogg",
+}
+
+
 def _mime_type(stream_url: str) -> str:
-    """Guess the stream MIME type and use MP3 as the safe default."""
-    mime_type, _ = mimetypes.guess_type(urlsplit(stream_url).path)
-    return mime_type or "audio/mpeg"
+    """Return the stream MIME type from the extension, with MP3 as the default."""
+    path = urlsplit(stream_url).path.lower()
+    extension = path[path.rfind(".") :] if "." in path.rsplit("/", 1)[-1] else ""
+    return _STREAM_MIME_TYPES.get(extension, "audio/mpeg")
 
 
 def _play_media(station: Station) -> PlayMedia:
