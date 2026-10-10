@@ -40,6 +40,7 @@ async def test_second_refresh_uses_cached_station_detail(hass) -> None:
     client.get_favorites.return_value = _collection("station-1")
     client.get_station.return_value = _station("station-1")
     coordinator = CommonsRadioCoordinator(hass, client)
+    coordinator.async_add_station_listener("station-1")
 
     await coordinator._async_update_data()
     await coordinator._async_update_data()
@@ -57,6 +58,8 @@ async def test_new_favorite_fetches_one_station_detail(hass) -> None:
     ]
     client.get_station.side_effect = [_station("station-1"), _station("station-2")]
     coordinator = CommonsRadioCoordinator(hass, client)
+    coordinator.async_add_station_listener("station-1")
+    coordinator.async_add_station_listener("station-2")
 
     await coordinator._async_update_data()
     await coordinator._async_update_data()

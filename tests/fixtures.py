@@ -10,6 +10,7 @@ BASE_URL = "https://www.commonsradio.eu/api/v1"
 def station(
     station_id: str = "station-1",
     *,
+    slug: str | None = None,
     name: str = "Station One",
     country: str | None = "Belgium",
     stream_url: str = "https://stream.example/station.mp3",
@@ -17,7 +18,7 @@ def station(
     """Return one station response."""
     return {
         "id": station_id,
-        "slug": station_id,
+        "slug": slug or station_id,
         "name": name,
         "country": country,
         "city": "Brussels",

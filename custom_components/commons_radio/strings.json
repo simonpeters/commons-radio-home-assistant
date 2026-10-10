@@ -27,5 +27,39 @@
         }
       }
     }
+  },
+  "services": {
+    "play": {
+      "name": "Play",
+      "description": "Plays a Commons Radio station on one or more media players.",
+      "fields": {
+        "station": {
+          "name": "Station",
+          "description": "The station ID, slug, or name."
+        },
+        "collection": {
+          "name": "Collection",
+          "description": "The collection ID or name. Commons Radio picks a station at play time."
+        },
+        "favorites": {
+          "name": "Favorites",
+          "description": "Play a random favorite station."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "select_one_source": {
+      "message": "Set one source: station, collection, or favorites. Set favorites to true."
+    },
+    "not_configured": {
+      "message": "Commons Radio is not configured."
+    },
+    "station_not_found": {
+      "message": "The station was not found."
+    },
+    "collection_not_found": {
+      "message": "The collection was not found."
+    }
   }
 }
