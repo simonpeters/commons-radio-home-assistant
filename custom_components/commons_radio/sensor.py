@@ -61,6 +61,7 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
             identifiers={(DOMAIN, entry_id)},
             name="Commons Radio",
             manufacturer="Commons Radio",
+            model="On-air service",
             entry_type=DeviceEntryType.SERVICE,
             configuration_url="https://www.commonsradio.eu",
         )

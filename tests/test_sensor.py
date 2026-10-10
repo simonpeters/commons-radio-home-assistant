@@ -133,6 +133,8 @@ async def test_sensors_belong_to_one_service_device(hass, aioclient_mock) -> Non
     devices = dr.async_entries_for_config_entry(registry, entry.entry_id)
     assert [device.identifiers for device in devices] == [{(DOMAIN, entry.entry_id)}]
     assert devices[0].entry_type is dr.DeviceEntryType.SERVICE
+    assert devices[0].name == "Commons Radio"
+    assert devices[0].model == "On-air service"
     assert registry.async_get(old_device.id) is None
 
 

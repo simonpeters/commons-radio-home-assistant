@@ -58,20 +58,27 @@ station details for one hour. The sensor state is the current show title. The
 state is `unknown` when the API has no current show. The next show is in the
 sensor attributes.
 
-## Use in automations
+The sensors belong to the **Commons Radio** service device. Its model is
+**On-air service**. This model separates it from the **Commons Radio** update
+device that HACS creates for the downloaded repository.
 
-Use the media browser picker in the automation editor:
+## Play from an automation
 
-1. Create an automation and add a time trigger.
-2. Set the time to **09:00:00**.
-3. Add the **Play media** action.
-4. Select the kitchen media player.
-5. Select **Choose media**, then **Commons Radio**.
-6. Select **Favorites** or a collection.
+The `commons_radio.play` action has a media picker:
 
-You can also use the `commons_radio.play` action. Set one of `station`,
-`collection`, or `favorites: true`. This example plays a random station from
-the Morning collection at 09:00:
+1. Add an action.
+2. Search for **Commons Radio: Play**. You can also select your speaker under
+   **By target** first.
+3. Select one or more speakers as the target.
+4. In **Media**, select **Commons Radio**, then select **Favorites**, a
+   collection, or a station.
+
+The **Media** field is the first field in the action editor. For YAML and voice
+scripts, you can also set `station`, `collection`, or `favorites: true`. Set
+exactly one of these four sources: `media`, `station`, `collection`, or
+`favorites`.
+
+This example plays a random station from the Morning collection at 09:00:
 
 ```yaml
 alias: Morning radio
@@ -101,6 +108,17 @@ data:
 
 To use voice control, create a script with the `commons_radio.play` action.
 Expose the script to Assist. You can then ask Assist to run the script.
+
+You can also use Home Assistant's standard **Play media** action:
+
+Use the media browser picker in the automation editor:
+
+1. Create an automation and add a time trigger.
+2. Set the time to **09:00:00**.
+3. Add the **Play media** action.
+4. Select the kitchen media player.
+5. Select **Choose media**, then **Commons Radio**.
+6. Select **Favorites** or a collection.
 
 ## Blueprints
 

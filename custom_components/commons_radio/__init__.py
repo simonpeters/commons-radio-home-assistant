@@ -14,8 +14,16 @@ from homeassistant.components.media_player.const import (
     ATTR_MEDIA_EXTRA,
     SERVICE_PLAY_MEDIA,
 )
+from homeassistant.components.media_source import MediaSourceItem
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ENTITY_ID, Platform
+from homeassistant.const import (
+    ATTR_AREA_ID,
+    ATTR_DEVICE_ID,
+    ATTR_ENTITY_ID,
+    ATTR_FLOOR_ID,
+    ATTR_LABEL_ID,
+    Platform,
+)
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
@@ -24,8 +32,10 @@ from homeassistant.exceptions import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.service import async_extract_entity_ids
 from homeassistant.helpers.typing import ConfigType
 
 from .commonsradio import (
@@ -38,22 +48,43 @@ from .commonsradio import (
 )
 from .const import CONF_API_KEY, DOMAIN, USER_AGENT
 from .coordinator import CommonsRadioCoordinator
-from .media_source import async_resolve_collection, station_to_play_media
+from .media_source import (
+    async_resolve_collection,
+    async_resolve_station,
+    station_to_play_media,
+)
 
 PLATFORMS = [Platform.SENSOR]
 SERVICE_PLAY = "play"
+ATTR_MEDIA = "media"
 ATTR_STATION = "station"
 ATTR_COLLECTION = "collection"
 ATTR_FAVORITES = "favorites"
+TARGET_FIELDS = (
+    ATTR_ENTITY_ID,
+    ATTR_DEVICE_ID,
+    ATTR_AREA_ID,
+    ATTR_FLOOR_ID,
+    ATTR_LABEL_ID,
+)
 
 
 def _validate_play_data(data: dict) -> dict:
     """Require one valid media source field."""
     source_fields = {
-        key for key in (ATTR_STATION, ATTR_COLLECTION, ATTR_FAVORITES) if key in data
+        key
+        for key in (ATTR_MEDIA, ATTR_STATION, ATTR_COLLECTION, ATTR_FAVORITES)
+        if key in data
     }
     valid = len(source_fields) == 1
-    if ATTR_FAVORITES in source_fields:
+    if ATTR_MEDIA in source_fields:
+        media_id = data[ATTR_MEDIA][ATTR_MEDIA_CONTENT_ID]
+        if not media_id.startswith(f"media-source://{DOMAIN}/"):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_media_source",
+            )
+    elif ATTR_FAVORITES in source_fields:
         valid = valid and data[ATTR_FAVORITES] is True
     elif source_fields:
         valid = valid and bool(data[next(iter(source_fields))].strip())
@@ -66,9 +97,9 @@ def _validate_play_data(data: dict) -> dict:
 
 
 PLAY_SCHEMA = vol.All(
-    vol.Schema(
+    cv.make_entity_service_schema(
         {
-            vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+            vol.Optional(ATTR_MEDIA): selector.MediaSelector({"accept": ["*"]}),
             vol.Optional(ATTR_STATION): cv.string,
             vol.Optional(ATTR_COLLECTION): cv.string,
             vol.Optional(ATTR_FAVORITES): cv.boolean,
@@ -111,7 +142,14 @@ async def _async_play(call: ServiceCall) -> None:
         )
     client = entries[0].runtime_data.client
 
-    if station_value := call.data.get(ATTR_STATION):
+    if media := call.data.get(ATTR_MEDIA):
+        item = MediaSourceItem.from_uri(
+            hass,
+            media[ATTR_MEDIA_CONTENT_ID],
+            None,
+        )
+        station = await async_resolve_station(client, item.identifier.strip("/"))
+    elif station_value := call.data.get(ATTR_STATION):
         station = await _async_find_station(client, station_value)
     elif collection_value := call.data.get(ATTR_COLLECTION):
         collections = await client.get_collections()
@@ -135,11 +173,23 @@ async def _async_play(call: ServiceCall) -> None:
         station = await async_resolve_collection(client, favorites)
 
     resolved = station_to_play_media(station)
+    # The target can hold our own sensors (so that the action shows for the
+    # Commons Radio device), areas or devices. Play only on media players.
+    players = sorted(
+        entity_id
+        for entity_id in await async_extract_entity_ids(call)
+        if entity_id.startswith(f"{MEDIA_PLAYER_DOMAIN}.")
+    )
+    if not players:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="no_media_player",
+        )
+    target = {ATTR_ENTITY_ID: players}
     await hass.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
         {
-            ATTR_ENTITY_ID: call.data[ATTR_ENTITY_ID],
             ATTR_MEDIA_CONTENT_ID: resolved.url,
             ATTR_MEDIA_CONTENT_TYPE: resolved.mime_type,
             ATTR_MEDIA_EXTRA: {
@@ -147,6 +197,7 @@ async def _async_play(call: ServiceCall) -> None:
                 "thumb": station.logo_url,
             },
         },
+        target=target,
         blocking=True,
         context=call.context,
     )

@@ -1,8 +1,16 @@
 play:
   target:
     entity:
-      domain: media_player
+      - domain: media_player
+      - domain: sensor
+        integration: commons_radio
   fields:
+    media:
+      required: false
+      selector:
+        media:
+          accept:
+            - "*"
     station:
       required: false
       example: "nts-radio"

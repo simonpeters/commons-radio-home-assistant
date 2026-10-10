@@ -28,8 +28,10 @@ BLUEPRINTS = (
         {
             "media_players": ["media_player.bedroom"],
             "wake_time": "07:00:00",
-            "source_type": "collection",
-            "source_name": "Morning",
+            "media": {
+                "media_content_id": "media-source://commons_radio/collection/morning",
+                "media_content_type": "music",
+            },
         },
     ),
     (
@@ -37,8 +39,10 @@ BLUEPRINTS = (
         "come_home.yaml",
         {
             "media_players": ["media_player.kitchen"],
-            "source_type": "station",
-            "source_name": "NTS Radio",
+            "media": {
+                "media_content_id": "media-source://commons_radio/station/nts-radio",
+                "media_content_type": "music",
+            },
         },
     ),
     (
@@ -51,7 +55,10 @@ BLUEPRINTS = (
         "fall_asleep.yaml",
         {
             "media_players": ["media_player.bedroom"],
-            "source_type": "favorites",
+            "media": {
+                "media_content_id": "media-source://commons_radio/favorites",
+                "media_content_type": "music",
+            },
         },
     ),
 )
@@ -123,8 +130,12 @@ async def test_come_home_plays_only_in_time_window(hass, freezer) -> None:
                 path,
                 {
                     "media_players": ["media_player.kitchen"],
-                    "source_type": "collection",
-                    "source_name": "Morning",
+                    "media": {
+                        "media_content_id": (
+                            "media-source://commons_radio/collection/morning"
+                        ),
+                        "media_content_type": "music",
+                    },
                     "after": "06:00:00",
                     "before": "23:00:00",
                 },
@@ -142,6 +153,42 @@ async def test_come_home_plays_only_in_time_window(hass, freezer) -> None:
     hass.states.async_set("zone.home", "0")
     await hass.async_block_till_done()
     freezer.move_to("2026-10-10 12:00:00+00:00")
+    hass.states.async_set("zone.home", "1")
+    await hass.async_block_till_done()
+
+    assert len(play_calls) == 1
+    assert play_calls[0].data == {
+        ATTR_ENTITY_ID: ["media_player.kitchen"],
+        "media": {
+            "media_content_id": "media-source://commons_radio/collection/morning",
+            "media_content_type": "music",
+        },
+    }
+
+
+@pytest.mark.freeze_time("2026-10-10 12:00:00+00:00")
+async def test_come_home_keeps_legacy_source_inputs(hass) -> None:
+    """Keep existing blueprint instances working after the picker is added."""
+    await hass.config.async_set_time_zone("UTC")
+    path = _install_blueprint(hass, "automation", "come_home.yaml")
+    play_calls = async_mock_service(hass, "commons_radio", "play")
+    async_mock_service(hass, "media_player", "volume_set")
+    hass.states.async_set("zone.home", "0")
+    config = {
+        "automation": [
+            _blueprint_instance(
+                path,
+                {
+                    "media_players": ["media_player.kitchen"],
+                    "source_type": "collection",
+                    "source_name": "Morning",
+                },
+            )
+        ]
+    }
+    assert await async_setup_component(hass, "automation", config)
+    await hass.async_block_till_done()
+
     hass.states.async_set("zone.home", "1")
     await hass.async_block_till_done()
 
