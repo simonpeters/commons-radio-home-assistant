@@ -54,7 +54,7 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
         super().__init__(coordinator)
         self._station_id = station_id
         self._attr_unique_id = f"{entry_id}_{station_id}_on_air"
-        self._attr_name = f"{coordinator.station_name(station_id)} on air"
+        self._attr_name = coordinator.station_name(station_id)
         # A station is not a device in the home. All sensors belong to one
         # service device, so Home Assistant does not ask for an area.
         self._attr_device_info = DeviceInfo(

@@ -6,16 +6,19 @@ import pytest
 from homeassistant.components.media_player.const import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
+    ATTR_MEDIA_EXTRA,
     SERVICE_PLAY_MEDIA,
 )
 from homeassistant.components.media_player.const import (
     DOMAIN as MEDIA_PLAYER_DOMAIN,
 )
 from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_mock_service,
+)
 
 from custom_components.commons_radio import SERVICE_PLAY
 from custom_components.commons_radio.const import CONF_API_KEY, DOMAIN
@@ -37,21 +40,6 @@ async def _setup_entry(hass, aioclient_mock) -> MockConfigEntry:
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
-
-
-def _capture_play_media(hass) -> list[ServiceCall]:
-    """Capture calls to the media player action."""
-    calls: list[ServiceCall] = []
-
-    async def capture(call: ServiceCall) -> None:
-        calls.append(call)
-
-    hass.services.async_register(
-        MEDIA_PLAYER_DOMAIN,
-        SERVICE_PLAY_MEDIA,
-        capture,
-    )
-    return calls
 
 
 async def _call_play(hass, **data) -> None:
@@ -78,10 +66,7 @@ async def test_play_station_by_id_or_slug(
     """Resolve a station ID or slug and play its stream URL."""
     await _setup_entry(hass, aioclient_mock)
     aioclient_mock.get(f"{BASE_URL}/stations/{value}", json=station_response)
-    aioclient_mock.get(
-        f"{BASE_URL}/stations/{station_response['id']}", json=station_response
-    )
-    calls = _capture_play_media(hass)
+    calls = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
 
     await _call_play(hass, station=value)
 
@@ -90,6 +75,10 @@ async def test_play_station_by_id_or_slug(
         ATTR_ENTITY_ID: ["media_player.kitchen"],
         ATTR_MEDIA_CONTENT_ID: "https://stream.example/station.mp3",
         ATTR_MEDIA_CONTENT_TYPE: "audio/mpeg",
+        ATTR_MEDIA_EXTRA: {
+            "title": station_response["name"],
+            "thumb": station_response["logoUrl"],
+        },
     }
 
 
@@ -109,8 +98,7 @@ async def test_play_station_by_name(hass, aioclient_mock) -> None:
             "offset": 0,
         },
     )
-    aioclient_mock.get(f"{BASE_URL}/stations/match", json=station("match"))
-    calls = _capture_play_media(hass)
+    calls = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
 
     await _call_play(hass, station="My Station")
 
@@ -129,24 +117,39 @@ async def test_play_collection_by_name(hass, aioclient_mock) -> None:
         station_ids=["station-2"],
     )
     aioclient_mock.get(f"{BASE_URL}/me/collections", json=[morning])
-    aioclient_mock.get(f"{BASE_URL}/me/collections/morning-id", json=morning)
     aioclient_mock.get(f"{BASE_URL}/stations/station-2", json=station("station-2"))
-    calls = _capture_play_media(hass)
+    calls = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
 
     await _call_play(hass, collection="morning")
 
-    assert calls[0].data[ATTR_MEDIA_CONTENT_ID].endswith("station.mp3")
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: ["media_player.kitchen"],
+        ATTR_MEDIA_CONTENT_ID: "https://stream.example/station.mp3",
+        ATTR_MEDIA_CONTENT_TYPE: "audio/mpeg",
+        ATTR_MEDIA_EXTRA: {
+            "title": "Station One",
+            "thumb": "https://images.example/station-2.png",
+        },
+    }
 
 
 async def test_play_favorites(hass, aioclient_mock) -> None:
     """Play a random favorite station."""
     await _setup_entry(hass, aioclient_mock)
     aioclient_mock.get(f"{BASE_URL}/stations/station-1", json=station())
-    calls = _capture_play_media(hass)
+    calls = async_mock_service(hass, MEDIA_PLAYER_DOMAIN, SERVICE_PLAY_MEDIA)
 
     await _call_play(hass, favorites=True)
 
-    assert calls[0].data[ATTR_MEDIA_CONTENT_ID].endswith("station.mp3")
+    assert calls[0].data == {
+        ATTR_ENTITY_ID: ["media_player.kitchen"],
+        ATTR_MEDIA_CONTENT_ID: "https://stream.example/station.mp3",
+        ATTR_MEDIA_CONTENT_TYPE: "audio/mpeg",
+        ATTR_MEDIA_EXTRA: {
+            "title": "Station One",
+            "thumb": "https://images.example/station-1.png",
+        },
+    }
 
 
 @pytest.mark.parametrize(
