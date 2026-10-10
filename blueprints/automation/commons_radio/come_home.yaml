@@ -19,9 +19,17 @@ blueprint:
               filter:
                 domain: media_player
               multiple: true
+        media:
+          name: Radio source
+          description: Select Favorites, a collection, or a station from Commons Radio.
+          default: {}
+          selector:
+            media:
+              accept:
+                - "*"
         source_type:
-          name: Source type
-          description: Select what Commons Radio plays.
+          name: Legacy source type
+          description: Use this only when Radio source is empty. It keeps older blueprint settings working.
           default: favorites
           selector:
             select:
@@ -33,8 +41,8 @@ blueprint:
                 - label: Station
                   value: station
         source_name:
-          name: Source name
-          description: Enter the collection or station name. Leave this empty for favorites.
+          name: Legacy source name
+          description: Enter the old collection or station name. Leave this empty for favorites.
           default: ""
           selector:
             text:
@@ -89,6 +97,7 @@ conditions:
         before: !input before
 
 variables:
+  media: !input media
   source_type: !input source_type
   source_name: !input source_name
   use_time_window: !input use_time_window
@@ -102,6 +111,13 @@ actions:
     data:
       volume_level: "{{ (volume | float(0)) / 100 }}"
   - choose:
+      - conditions: "{{ media is mapping and 'media_content_id' in media }}"
+        sequence:
+          - action: commons_radio.play
+            target:
+              entity_id: !input media_players
+            data:
+              media: !input media
       - conditions: "{{ source_type == 'favorites' }}"
         sequence:
           - action: commons_radio.play

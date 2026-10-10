@@ -33,6 +33,10 @@
       "name": "Play",
       "description": "Plays a Commons Radio station on one or more media players.",
       "fields": {
+        "media": {
+          "name": "Media",
+          "description": "Select Favorites, a collection, or a station from Commons Radio."
+        },
         "station": {
           "name": "Station",
           "description": "The station ID, slug, or name."
@@ -50,7 +54,10 @@
   },
   "exceptions": {
     "select_one_source": {
-      "message": "Set one source: station, collection, or favorites. Set favorites to true."
+      "message": "Set one source: media, station, collection, or favorites. Set favorites to true."
+    },
+    "invalid_media_source": {
+      "message": "Select media from Commons Radio. Other media sources are not supported."
     },
     "not_configured": {
       "message": "Commons Radio is not configured."
@@ -60,6 +67,9 @@
     },
     "collection_not_found": {
       "message": "The collection was not found."
+    },
+    "no_media_player": {
+      "message": "Select at least one speaker (a media player) as the target."
     }
   }
 }

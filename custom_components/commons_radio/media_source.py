@@ -60,24 +60,13 @@ class CommonsRadioMediaSource(MediaSource):
 
     async def async_resolve_media(self, item: MediaSourceItem) -> PlayMedia:
         """Resolve a station or collection item to a stream URL."""
-        identifier = item.identifier.strip("/")
         try:
-            if identifier == FAVORITES:
-                collection = await self.client.get_favorites()
-                station = await async_resolve_collection(self.client, collection)
-                return station_to_play_media(station)
-            if identifier.startswith(COLLECTION_PREFIX):
-                collection_id = unquote(identifier.removeprefix(COLLECTION_PREFIX))
-                collection = await self.client.get_collection(collection_id)
-                station = await async_resolve_collection(self.client, collection)
-                return station_to_play_media(station)
-            if identifier.startswith(STATION_PREFIX):
-                station_id = unquote(identifier.removeprefix(STATION_PREFIX))
-                station = await self.client.get_station(station_id)
-                return station_to_play_media(station)
+            station = await async_resolve_station(
+                self.client, item.identifier.strip("/")
+            )
+            return station_to_play_media(station)
         except CommonsRadioError as error:
             raise Unresolvable("The Commons Radio item could not be loaded.") from error
-        raise Unresolvable("This Commons Radio item cannot be played.")
 
     async def async_browse_media(self, item: MediaSourceItem) -> BrowseMediaSource:
         """Return one level of the Commons Radio media tree."""
@@ -235,6 +224,21 @@ async def async_resolve_collection(client: Client, collection: Collection) -> St
 
     message = f'No station in the collection "{collection.name}" could be loaded.'
     raise Unresolvable(message) from last_error
+
+
+async def async_resolve_station(client: Client, identifier: str) -> Station:
+    """Resolve a Commons Radio media browser identifier to one station."""
+    if identifier == FAVORITES:
+        collection = await client.get_favorites()
+        return await async_resolve_collection(client, collection)
+    if identifier.startswith(COLLECTION_PREFIX):
+        collection_id = unquote(identifier.removeprefix(COLLECTION_PREFIX))
+        collection = await client.get_collection(collection_id)
+        return await async_resolve_collection(client, collection)
+    if identifier.startswith(STATION_PREFIX):
+        station_id = unquote(identifier.removeprefix(STATION_PREFIX))
+        return await client.get_station(station_id)
+    raise Unresolvable("This Commons Radio item cannot be played.")
 
 
 def station_to_play_media(station: Station) -> PlayMedia:
