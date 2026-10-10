@@ -68,3 +68,41 @@ UV_CACHE_DIR=.uv-cache UV_PYTHON_INSTALL_DIR=.uv-python uv run ruff format --che
 ```
 
 Tests use mocked HTTP. They do not call the live API.
+
+### Test in a local Home Assistant
+
+You need Docker. On macOS, start a Docker engine first, for example with
+`colima start`.
+
+1. Start Home Assistant:
+
+   ```sh
+   docker compose up -d
+   ```
+
+2. Open http://localhost:8123 and make a local account. The first start
+   takes approximately one minute.
+3. Make an API key on https://www.commonsradio.eu in your profile, under
+   "API keys". Give it the scopes `catalog:read` and `library:read`.
+4. Go to **Settings > Devices & services > Add integration**, select
+   **Commons Radio**, and enter the key.
+5. Open **Media > Commons Radio**. Select a station, and select
+   **This browser** as the player. The station plays in your browser.
+6. The "On air" sensors for your favorite stations are under
+   **Settings > Devices & services > Commons Radio**.
+
+After a change to the code, restart Home Assistant:
+
+```sh
+docker compose restart
+```
+
+Read the integration log:
+
+```sh
+docker compose logs -f homeassistant | grep commons_radio
+```
+
+Docker on macOS cannot find speakers on your network (mDNS). To test with
+real speakers or through HACS, use Home Assistant OS in a virtual machine or
+on a real device.
