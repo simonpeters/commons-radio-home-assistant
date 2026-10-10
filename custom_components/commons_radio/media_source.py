@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+from typing import TYPE_CHECKING
 from urllib.parse import quote, unquote, urlsplit
 
 from homeassistant.components.media_player import BrowseError, MediaClass, MediaType
@@ -16,7 +17,6 @@ from homeassistant.components.media_source import (
 )
 from homeassistant.core import HomeAssistant
 
-from . import CommonsRadioConfigEntry
 from .commonsradio import Client, Collection, CommonsRadioError, Station
 from .const import (
     COLLECTION_PREFIX,
@@ -26,6 +26,9 @@ from .const import (
     STATION_PREFIX,
     TITLE,
 )
+
+if TYPE_CHECKING:
+    from . import CommonsRadioConfigEntry
 
 COLLECTIONS = "collections"
 POPULAR = "popular"
@@ -61,15 +64,17 @@ class CommonsRadioMediaSource(MediaSource):
         try:
             if identifier == FAVORITES:
                 collection = await self.client.get_favorites()
-                return await self._resolve_collection(collection)
+                station = await async_resolve_collection(self.client, collection)
+                return station_to_play_media(station)
             if identifier.startswith(COLLECTION_PREFIX):
                 collection_id = unquote(identifier.removeprefix(COLLECTION_PREFIX))
                 collection = await self.client.get_collection(collection_id)
-                return await self._resolve_collection(collection)
+                station = await async_resolve_collection(self.client, collection)
+                return station_to_play_media(station)
             if identifier.startswith(STATION_PREFIX):
                 station_id = unquote(identifier.removeprefix(STATION_PREFIX))
                 station = await self.client.get_station(station_id)
-                return _play_media(station)
+                return station_to_play_media(station)
         except CommonsRadioError as error:
             raise Unresolvable("The Commons Radio item could not be loaded.") from error
         raise Unresolvable("This Commons Radio item cannot be played.")
@@ -134,25 +139,6 @@ class CommonsRadioMediaSource(MediaSource):
         folder = self._station_folder(identifier, title, stations)
         folder.can_play = True
         return folder
-
-    async def _resolve_collection(self, collection: Collection) -> PlayMedia:
-        """Pick a working station from a collection."""
-        remaining = list(collection.station_ids)
-        if not remaining:
-            message = f'The collection "{collection.name}" is empty.'
-            raise Unresolvable(message)
-
-        last_error: CommonsRadioError | None = None
-        while remaining:
-            station_id = random.choice(remaining)  # noqa: S311
-            remaining.remove(station_id)
-            try:
-                return _play_media(await self.client.get_station(station_id))
-            except CommonsRadioError as error:
-                last_error = error
-
-        message = f'No station in the collection "{collection.name}" could be loaded.'
-        raise Unresolvable(message) from last_error
 
     async def _fetch_stations(
         self, station_ids: tuple[str, ...]
@@ -231,6 +217,26 @@ def _mime_type(stream_url: str) -> str:
     return _STREAM_MIME_TYPES.get(extension, "audio/mpeg")
 
 
-def _play_media(station: Station) -> PlayMedia:
+async def async_resolve_collection(client: Client, collection: Collection) -> Station:
+    """Pick and return a working station from a collection."""
+    remaining = list(collection.station_ids)
+    if not remaining:
+        message = f'The collection "{collection.name}" is empty.'
+        raise Unresolvable(message)
+
+    last_error: CommonsRadioError | None = None
+    while remaining:
+        station_id = random.choice(remaining)  # noqa: S311
+        remaining.remove(station_id)
+        try:
+            return await client.get_station(station_id)
+        except CommonsRadioError as error:
+            last_error = error
+
+    message = f'No station in the collection "{collection.name}" could be loaded.'
+    raise Unresolvable(message) from last_error
+
+
+def station_to_play_media(station: Station) -> PlayMedia:
     """Build resolved media for one station."""
     return PlayMedia(station.stream_url, _mime_type(station.stream_url))

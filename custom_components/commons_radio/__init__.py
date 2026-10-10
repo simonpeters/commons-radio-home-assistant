@@ -5,17 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
-from urllib.parse import quote
 
 import voluptuous as vol
 from homeassistant.components.media_player import DOMAIN as MEDIA_PLAYER_DOMAIN
 from homeassistant.components.media_player.const import (
     ATTR_MEDIA_CONTENT_ID,
     ATTR_MEDIA_CONTENT_TYPE,
+    ATTR_MEDIA_EXTRA,
     SERVICE_PLAY_MEDIA,
-)
-from homeassistant.components.media_source import (
-    async_resolve_media as async_resolve_media_source,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, Platform
@@ -39,15 +36,9 @@ from .commonsradio import (
     Station,
     UnauthorizedError,
 )
-from .const import (
-    COLLECTION_PREFIX,
-    CONF_API_KEY,
-    DOMAIN,
-    FAVORITES,
-    STATION_PREFIX,
-    USER_AGENT,
-)
+from .const import CONF_API_KEY, DOMAIN, USER_AGENT
 from .coordinator import CommonsRadioCoordinator
+from .media_source import async_resolve_collection, station_to_play_media
 
 PLATFORMS = [Platform.SENSOR]
 SERVICE_PLAY = "play"
@@ -122,7 +113,6 @@ async def _async_play(call: ServiceCall) -> None:
 
     if station_value := call.data.get(ATTR_STATION):
         station = await _async_find_station(client, station_value)
-        identifier = f"{STATION_PREFIX}{quote(station.id, safe='')}"
     elif collection_value := call.data.get(ATTR_COLLECTION):
         collections = await client.get_collections()
         collection = next(
@@ -139,13 +129,12 @@ async def _async_play(call: ServiceCall) -> None:
                 translation_domain=DOMAIN,
                 translation_key="collection_not_found",
             )
-        identifier = f"{COLLECTION_PREFIX}{quote(collection.id, safe='')}"
+        station = await async_resolve_collection(client, collection)
     else:
-        identifier = FAVORITES
+        favorites = await client.get_favorites()
+        station = await async_resolve_collection(client, favorites)
 
-    resolved = await async_resolve_media_source(
-        hass, f"media-source://{DOMAIN}/{identifier}", None
-    )
+    resolved = station_to_play_media(station)
     await hass.services.async_call(
         MEDIA_PLAYER_DOMAIN,
         SERVICE_PLAY_MEDIA,
@@ -153,6 +142,10 @@ async def _async_play(call: ServiceCall) -> None:
             ATTR_ENTITY_ID: call.data[ATTR_ENTITY_ID],
             ATTR_MEDIA_CONTENT_ID: resolved.url,
             ATTR_MEDIA_CONTENT_TYPE: resolved.mime_type,
+            ATTR_MEDIA_EXTRA: {
+                "title": station.name,
+                "thumb": station.logo_url,
+            },
         },
         blocking=True,
         context=call.context,

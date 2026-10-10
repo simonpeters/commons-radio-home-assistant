@@ -67,12 +67,13 @@ async def test_sensor_state_and_next_show(
     state = hass.states.get("sensor.commons_radio_station_1_on_air")
     assert state is not None
     assert state.state == expected_state
+    assert state.attributes["friendly_name"] == "Commons Radio Station One"
     assert state.attributes["next_show"] == "Next Show"
     assert state.attributes["next_show_start"] == "2026-10-10T10:00:00Z"
 
 
 async def test_sensor_entity_id_uses_station_name(hass, aioclient_mock) -> None:
-    """Use the station name when Home Assistant creates the entity ID."""
+    """Use only the station name for a new sensor."""
     aioclient_mock.get(f"{BASE_URL}/me/favorites", json=collection())
     aioclient_mock.get(f"{BASE_URL}/stations/station-1", json=station())
     entry = _entry(hass)
@@ -81,7 +82,9 @@ async def test_sensor_entity_id_uses_station_name(hass, aioclient_mock) -> None:
     await hass.async_block_till_done()
 
     registry = er.async_get(hass)
-    assert registry.async_get("sensor.commons_radio_station_one_on_air") is not None
+    sensor = registry.async_get("sensor.commons_radio_station_one")
+    assert sensor is not None
+    assert sensor.original_name == "Station One"
     assert registry.async_get("sensor.commons_radio_station_1_on_air") is None
 
 
@@ -95,7 +98,7 @@ async def test_sensor_entity_id_falls_back_to_station_id(hass, aioclient_mock) -
     await hass.async_block_till_done()
 
     registry = er.async_get(hass)
-    assert registry.async_get("sensor.commons_radio_station_1_on_air") is not None
+    assert registry.async_get("sensor.commons_radio_station_1") is not None
 
 
 def _entry(hass) -> MockConfigEntry:
@@ -173,7 +176,7 @@ async def test_disabled_sensors_do_not_poll(hass, aioclient_mock) -> None:
     await hass.async_block_till_done()
 
     assert len(aioclient_mock.mock_calls) == initial_calls
-    assert hass.states.get("sensor.commons_radio_station_one_on_air") is None
+    assert hass.states.get("sensor.commons_radio_station_one") is None
 
 
 async def test_enabled_sensors_debounce_first_refresh(hass, aioclient_mock) -> None:
@@ -226,7 +229,7 @@ async def test_hourly_refresh_adds_new_favorite_without_schedule(
     await hass.async_block_till_done(wait_background_tasks=True)
 
     registry = er.async_get(hass)
-    assert registry.async_get("sensor.commons_radio_station_two_on_air") is not None
+    assert registry.async_get("sensor.commons_radio_station_two") is not None
     assert _request_count(aioclient_mock, "/schedule") == 0
 
 
