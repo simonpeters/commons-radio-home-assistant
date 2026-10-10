@@ -233,6 +233,34 @@ Read the integration log:
 docker compose logs -f homeassistant | grep commons_radio
 ```
 
+### Test the install through HACS
+
+The local Home Assistant above loads the integration from this folder. To
+test the install like a real user, use the clean instance on port 8124:
+
+1. Start it:
+
+   ```sh
+   docker compose --profile clean up -d homeassistant-clean
+   ```
+
+2. Open http://localhost:8124 and make a local account.
+3. Install HACS in the container. Read the script first on
+   https://hacs.xyz/docs/use/download/download/, then run:
+
+   ```sh
+   docker exec -it commons-radio-ha-clean bash -c "wget -O - https://get.hacs.xyz | bash -"
+   docker compose restart homeassistant-clean
+   ```
+
+4. In Home Assistant, add the **HACS** integration and sign in to GitHub
+   when it asks.
+5. On https://my.home-assistant.io, set your Home Assistant URL to
+   `http://localhost:8124`. The "Open in HACS" button then opens this
+   instance.
+6. Select the "Open in HACS" button at the top of this page, and follow the
+   install steps.
+
 Docker on macOS cannot find speakers on your network (mDNS). To test with
 real speakers or through HACS, use Home Assistant OS in a virtual machine or
 on a real device.

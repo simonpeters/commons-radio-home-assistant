@@ -15,3 +15,19 @@ services:
       # The integration from this repository. Restart the container after a change.
       - ./custom_components/commons_radio:/config/custom_components/commons_radio:ro
     restart: unless-stopped
+
+  # A clean Home Assistant without this repository mounted, for a test of
+  # the install through HACS like a real user. Start it with
+  # `docker compose --profile clean up -d homeassistant-clean` and open
+  # http://localhost:8124.
+  homeassistant-clean:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: commons-radio-ha-clean
+    profiles: ["clean"]
+    ports:
+      - "8124:8123"
+    environment:
+      TZ: Europe/Brussels
+    volumes:
+      - ./.ha-config-clean:/config
+    restart: unless-stopped
