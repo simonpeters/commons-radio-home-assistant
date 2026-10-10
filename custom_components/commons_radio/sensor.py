@@ -22,21 +22,19 @@ async def async_setup_entry(
 ) -> None:
     """Create one on-air sensor for each favorite station."""
     coordinator = entry.runtime_data.coordinator
-    known_station_ids: set[str] = set()
 
     @callback
-    def async_add_new_sensors() -> None:
-        new_station_ids = coordinator.data.keys() - known_station_ids
-        if not new_station_ids:
-            return
+    def async_add_new_sensors(station_ids: tuple[str, ...]) -> None:
+        """Add sensors after the Favorites refresh loads their names."""
         async_add_entities(
             CommonsRadioOnAirSensor(coordinator, entry.entry_id, station_id)
-            for station_id in new_station_ids
+            for station_id in station_ids
         )
-        known_station_ids.update(new_station_ids)
 
-    async_add_new_sensors()
-    entry.async_on_unload(coordinator.async_add_listener(async_add_new_sensors))
+    async_add_new_sensors(coordinator.favorite_station_ids)
+    entry.async_on_unload(
+        coordinator.async_add_favorites_listener(async_add_new_sensors)
+    )
 
 
 class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], SensorEntity):
@@ -44,6 +42,7 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:radio"
+    _attr_entity_registry_enabled_default = False
 
     def __init__(
         self,
@@ -55,7 +54,7 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
         super().__init__(coordinator)
         self._station_id = station_id
         self._attr_unique_id = f"{entry_id}_{station_id}_on_air"
-        self._attr_name = f"{coordinator.data[station_id].station.name} on air"
+        self._attr_name = f"{coordinator.station_name(station_id)} on air"
         # A station is not a device in the home. All sensors belong to one
         # service device, so Home Assistant does not ask for an area.
         self._attr_device_info = DeviceInfo(
@@ -66,10 +65,24 @@ class CommonsRadioOnAirSensor(CoordinatorEntity[CommonsRadioCoordinator], Sensor
             configuration_url="https://www.commonsradio.eu",
         )
 
+    async def async_added_to_hass(self) -> None:
+        """Start polling when this enabled sensor starts listening."""
+        self.coordinator.async_add_station_listener(self._station_id)
+        await super().async_added_to_hass()
+        await self.coordinator.async_request_refresh()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop schedule work when this sensor stops listening."""
+        self.coordinator.async_remove_station_listener(self._station_id)
+        await super().async_will_remove_from_hass()
+
     @property
     def available(self) -> bool:
         """Return False when the station is no longer a favorite."""
-        return super().available and self._station_id in self.coordinator.data
+        return (
+            super().available
+            and self._station_id in self.coordinator.favorite_station_ids
+        )
 
     @property
     def _station_data(self) -> FavoriteStationData | None:

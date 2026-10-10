@@ -11,8 +11,8 @@ This is phase 1. It supports station browsing, playback, favorites,
 collections, and schedule sensors. It does not control a Commons Radio
 hardware radio.
 
-The Commons Radio API is not deployed yet. You need an API key with the
-`catalog:read` and `library:read` scopes when the API becomes available.
+You need a Commons Radio API key with the `catalog:read` and `library:read`
+scopes.
 
 ## Install with HACS
 
@@ -39,13 +39,62 @@ Open the media browser and select **Commons Radio**. You can browse:
 - Popular stations
 
 Select a station to play its stream on any media player that Home Assistant
-controls.
+controls. You can also play **Favorites** or a collection. Commons Radio picks
+a random station when playback starts.
 
-The integration polls favorites and schedules once per minute. It keeps
-station details for one hour to reduce API requests. Each favorite station
-gets an **On air** sensor. The state is the current show title. The state is
-`unknown` when the API has no current show. The next show is in the sensor
-attributes.
+Each favorite station gets an **On air** sensor. These sensors are off by
+default. A disabled sensor costs no requests. The integration makes one shared
+Favorites check per hour while it is loaded. New favorites get a sensor within
+one hour. To enable a sensor, open **Settings > Devices & services > Entities**.
+Select the sensor, open its settings, and enable it. Enabled sensors update
+once per minute. Only enabled sensors request schedules. The integration keeps
+station details for one hour. The sensor state is the current show title. The
+state is `unknown` when the API has no current show. The next show is in the
+sensor attributes.
+
+## Use in automations
+
+Use the media browser picker in the automation editor:
+
+1. Create an automation and add a time trigger.
+2. Set the time to **09:00:00**.
+3. Add the **Play media** action.
+4. Select the kitchen media player.
+5. Select **Choose media**, then **Commons Radio**.
+6. Select **Favorites** or a collection.
+
+You can also use the `commons_radio.play` action. Set one of `station`,
+`collection`, or `favorites: true`. This example plays a random station from
+the Morning collection at 09:00:
+
+```yaml
+alias: Morning radio
+triggers:
+  - trigger: time
+    at: "09:00:00"
+actions:
+  - action: commons_radio.play
+    target:
+      entity_id: media_player.kitchen
+    data:
+      collection: Morning
+mode: single
+```
+
+The station field accepts a station ID, slug, or name:
+
+```yaml
+action: commons_radio.play
+target:
+  entity_id:
+    - media_player.kitchen
+    - media_player.living_room
+data:
+  station: nts-radio
+```
+
+To use voice control, create a script with the `commons_radio.play` action.
+Expose the script to Assist. You can then ask Assist to run the script.
 
 ## Icon
 

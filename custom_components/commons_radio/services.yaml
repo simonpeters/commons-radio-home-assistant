@@ -1,0 +1,19 @@
+play:
+  target:
+    entity:
+      domain: media_player
+  fields:
+    station:
+      required: false
+      example: "nts-radio"
+      selector:
+        text:
+    collection:
+      required: false
+      example: "Morning"
+      selector:
+        text:
+    favorites:
+      required: false
+      selector:
+        boolean:
