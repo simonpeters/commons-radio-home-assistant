@@ -172,6 +172,11 @@ cards:
         entity_id: media_player.kitchen
 ```
 
+## Other tools
+
+The public API also works with Node-RED, n8n and your own scripts. See
+[the public API guide](docs/public-api.md).
+
 ## Icon
 
 The integration uses the Commons Radio app icon from
