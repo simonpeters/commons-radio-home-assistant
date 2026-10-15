@@ -65,11 +65,14 @@ class Client:
         self._base_url = base_url.rstrip("/")
         self._user_agent = user_agent
 
-    async def _get(self, path: str, **params: str | int) -> Any:
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "User-Agent": self._user_agent,
-        }
+    async def _get(
+        self, path: str, *, authenticated: bool = True, **params: str | int
+    ) -> Any:
+        # Station routes are public. Without the Authorization header, the CDN
+        # can serve them from its cache instead of running the API each time.
+        headers = {"User-Agent": self._user_agent}
+        if authenticated:
+            headers["Authorization"] = f"Bearer {self._api_key}"
         try:
             async with self._session.get(
                 f"{self._base_url}{path}", headers=headers, params=params or None
@@ -107,7 +110,7 @@ class Client:
 
     async def get_station(self, station_id_or_slug: str) -> Station:
         """Return one station by ID or slug."""
-        data = await self._get(f"/stations/{station_id_or_slug}")
+        data = await self._get(f"/stations/{station_id_or_slug}", authenticated=False)
         return Station.from_dict(data)
 
     async def list_stations(
@@ -129,7 +132,7 @@ class Client:
             params["q"] = query
         if country:
             params["country"] = country
-        data = await self._get("/stations", **params)
+        data = await self._get("/stations", authenticated=False, **params)
         return StationPage(
             stations=tuple(Station.from_dict(item) for item in data["stations"]),
             has_more=bool(data["hasMore"]),
@@ -139,5 +142,7 @@ class Client:
 
     async def get_schedule(self, station_id_or_slug: str) -> Schedule | None:
         """Return the station schedule summary, if the station has one."""
-        data = await self._get(f"/stations/{station_id_or_slug}/schedule")
+        data = await self._get(
+            f"/stations/{station_id_or_slug}/schedule", authenticated=False
+        )
         return Schedule.from_dict(data) if isinstance(data, dict) else None
