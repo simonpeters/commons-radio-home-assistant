@@ -119,7 +119,10 @@ class CommonsRadioCoordinator(DataUpdateCoordinator[dict[str, FavoriteStationDat
         except CommonsRadioError:
             _LOGGER.warning("The hourly Favorites refresh failed", exc_info=True)
             return
+        old_station_ids = self.favorite_station_ids
         await self.async_update_favorites(favorites)
+        if self.favorite_station_ids != old_station_ids:
+            self.async_update_listeners()
 
     async def _async_fetch_station_details(self, station_ids: tuple[str, ...]) -> None:
         """Fetch station details and let one failed station use its ID."""
@@ -151,15 +154,17 @@ class CommonsRadioCoordinator(DataUpdateCoordinator[dict[str, FavoriteStationDat
         return station
 
     async def _async_update_data(self) -> dict[str, FavoriteStationData]:
-        """Fetch favorites and schedules for enabled sensors."""
+        """Fetch schedules for enabled sensors.
+
+        The hourly Favorites refresh keeps the station list current, so this
+        update does not request the favorites again.
+        """
         try:
-            favorites = await self.client.get_favorites()
-            await self.async_update_favorites(favorites)
             semaphore = asyncio.Semaphore(SCHEDULE_PARALLEL_LIMIT)
             refresh_time = monotonic()
             station_ids = tuple(
                 station_id
-                for station_id in favorites.station_ids
+                for station_id in self.favorite_station_ids
                 if station_id in self.listening_station_ids
             )
 

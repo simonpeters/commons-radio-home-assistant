@@ -110,7 +110,7 @@ sensor:
       x-api-key: !secret commons_radio_api_key
     value_template: >-
       {{ value_json.now.title if value_json and value_json.now else "No programme data" }}
-    scan_interval: 60
+    scan_interval: 300
 ```
 
 ## Node-RED

@@ -15,7 +15,7 @@ from custom_components.commons_radio.commonsradio import (
     UnauthorizedError,
 )
 
-from .fixtures import BASE_URL, collection
+from .fixtures import BASE_URL, collection, schedule, station
 
 
 @pytest.mark.parametrize(
@@ -68,3 +68,25 @@ def test_vendored_client_matches_package() -> None:
 
     for filename in ("__init__.py", "client.py", "models.py"):
         assert (package / filename).read_bytes() == (vendored / filename).read_bytes()
+
+
+async def test_client_sends_key_only_to_private_routes(hass, aioclient_mock) -> None:
+    """Send no key to public station routes, so the CDN can cache them."""
+    aioclient_mock.get(f"{BASE_URL}/me/favorites", json=collection())
+    aioclient_mock.get(f"{BASE_URL}/stations/station-1", json=station())
+    aioclient_mock.get(f"{BASE_URL}/stations/station-1/schedule", json=schedule("Show"))
+    aioclient_mock.get(
+        f"{BASE_URL}/stations",
+        json={"stations": [], "hasMore": False, "limit": 20, "offset": 0},
+    )
+    client = Client(async_get_clientsession(hass), "secret")
+
+    await client.get_favorites()
+    await client.get_station("station-1")
+    await client.get_schedule("station-1")
+    await client.list_stations()
+
+    headers = [call[3] for call in aioclient_mock.mock_calls]
+    assert headers[0]["Authorization"] == "Bearer secret"
+    assert all("Authorization" not in item for item in headers[1:])
+    assert all(item["User-Agent"] for item in headers)
