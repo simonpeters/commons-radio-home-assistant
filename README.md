@@ -53,7 +53,7 @@ default. A disabled sensor costs no requests. The integration makes one shared
 Favorites check per hour while it is loaded. New favorites get a sensor within
 one hour. To enable a sensor, open **Settings > Devices & services > Entities**.
 Select the sensor, open its settings, and enable it. Enabled sensors update
-once per minute. Only enabled sensors request schedules. The integration keeps
+once every five minutes. Only enabled sensors request schedules. The integration keeps
 station details for one hour. The sensor state is the current show title. The
 state is `unknown` when the API has no current show. The next show is in the
 sensor attributes.

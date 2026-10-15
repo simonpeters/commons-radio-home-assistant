@@ -156,7 +156,7 @@ async def test_sensor_is_unavailable_after_favorite_removal(
     empty = collection()
     empty["stationIds"] = []
     aioclient_mock.get(f"{BASE_URL}/me/favorites", json=empty)
-    await entry.runtime_data.coordinator.async_refresh()
+    await entry.runtime_data.coordinator.async_refresh_favorites()
     await hass.async_block_till_done()
 
     state = hass.states.get("sensor.commons_radio_station_1_on_air")
@@ -203,8 +203,13 @@ async def test_enabled_sensors_debounce_first_refresh(hass, aioclient_mock) -> N
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    # One request validates the entry. One debounced request updates all sensors.
-    assert _request_count(aioclient_mock, "/me/favorites") == 2
+    # The debouncer runs the first sensor at once and the others after cooldown.
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=11))
+    await hass.async_block_till_done()
+
+    # One request validates the entry. The updates do not request favorites.
+    assert _request_count(aioclient_mock, "/me/favorites") == 1
+    assert _request_count(aioclient_mock, "/schedule") >= 3
 
 
 async def test_hourly_refresh_adds_new_favorite_without_schedule(
@@ -260,15 +265,37 @@ async def test_update_fetches_schedule_for_enabled_sensor_only(
 
     aioclient_mock.clear_requests()
     aioclient_mock.get(
-        f"{BASE_URL}/me/favorites",
-        json=collection(station_ids=station_ids),
-    )
-    aioclient_mock.get(
         f"{BASE_URL}/stations/station-1/schedule",
         json=schedule("Show 1"),
     )
 
     await entry.runtime_data.coordinator.async_refresh()
 
-    assert _request_count(aioclient_mock, "/me/favorites") == 1
+    assert _request_count(aioclient_mock, "/me/favorites") == 0
     assert _request_count(aioclient_mock, "/schedule") == 1
+
+
+async def test_schedules_update_every_five_minutes(hass, aioclient_mock) -> None:
+    """Request schedules again after five minutes, not after one."""
+    aioclient_mock.get(f"{BASE_URL}/me/favorites", json=collection())
+    aioclient_mock.get(f"{BASE_URL}/stations/station-1", json=station())
+    aioclient_mock.get(
+        f"{BASE_URL}/stations/station-1/schedule", json=schedule("Show 1")
+    )
+    entry = _entry(hass)
+    _enable_on_air_sensor(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(
+        f"{BASE_URL}/stations/station-1/schedule", json=schedule("Show 1")
+    )
+
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _request_count(aioclient_mock, "/schedule") == 0
+
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=6))
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert _request_count(aioclient_mock, "/schedule") == 1
+    assert _request_count(aioclient_mock, "/me/favorites") == 0
